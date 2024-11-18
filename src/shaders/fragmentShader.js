@@ -2,6 +2,7 @@ const fragmentShader = `
 
 uniform float uTime;
 uniform vec2 uMouse;
+uniform float uPointerSize;
 uniform samplerCube iChannel0;
 uniform float progress;
 uniform sampler2D uTexture;
@@ -57,14 +58,20 @@ float opSmoothUnion( float d1, float d2, float k ) {
 #define BALL_NUM 5
 
 float map(in vec3 p) {
-  float res = 1e2;
-  for(int i=0; i<BALL_NUM; i++) {
-    float fi = float(i) + 1.;
-    float r = uSize + 0.4 * hash(fi);
-    vec3 offset = 0.78 * sin(hash3(fi) * uTime);
-    res = opSmoothUnion(res, sphere(p-offset, r), 1.0);
-  }
-  return res;
+    float res = 1e2;
+    
+    // Add mouse-controlled sphere
+    vec3 mousePos = vec3(uMouse * 2.0 - 1.0, 0.0) * 3.0; // Scale mouse position to world space
+    res = sphere(p - mousePos, uPointerSize);
+    
+    // Existing metaballs
+    for(int i=0; i<BALL_NUM; i++) {
+        float fi = float(i) + 1.;
+        float r = uSize + 0.4 * hash(fi);
+        vec3 offset = 0.78 * sin(hash3(fi) * uTime);
+        res = opSmoothUnion(res, sphere(p-offset, r), 1.0);
+    }
+    return res;
 }
 
 vec3 normal(in vec3 p) {
@@ -82,6 +89,11 @@ mat3 lookAt(in vec3 eye, in vec3 tar, in float r) {
     vec3 cx = normalize(cross(cz, vec3(sin(r), cos(r), 0.)));
     vec3 cy = normalize(cross(cx, cz));
     return mat3(cx, cy, cz);
+}
+
+float createPointerBall(vec2 uv, vec2 mousePos, float size) {
+    float dist = length(uv - mousePos);
+    return smoothstep(size, size - 0.01, dist);
 }
 
 void main()

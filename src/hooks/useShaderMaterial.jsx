@@ -26,6 +26,7 @@ function useShaderMaterial({ vertexShader, fragmentShader }) {
           uDispersion: { value: 0.03 },
           uRefractPower: { value: 0.15 },
           uChromaticAberration: { value: 0.5 },
+          uPointerSize: { value: 0.03 },
         },
       }),
     []

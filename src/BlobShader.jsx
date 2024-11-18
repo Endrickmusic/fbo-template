@@ -18,9 +18,10 @@ export default function BlobShader({ map }) {
   const mousePosition = useRef({ x: 0, y: 0 })
 
   const updateMousePosition = useCallback((e) => {
+    const aspect = window.innerWidth / window.innerHeight
     mousePosition.current = {
-      x: (e.clientX / window.innerWidth) * 2 - 1,
-      y: -(e.clientY / window.innerHeight) * 2 + 1,
+      x: e.clientX / window.innerWidth,
+      y: 1 - e.clientY / window.innerHeight,
     }
   }, [])
 
@@ -40,6 +41,7 @@ export default function BlobShader({ map }) {
     dispersion: { value: 0.03, min: 0.0, max: 0.1, step: 0.001 },
     refract: { value: 0.15, min: 0.0, max: 2.0, step: 0.1 },
     chromaticAberration: { value: 0.5, min: 0.0, max: 5.0, step: 0.1 },
+    pointerSize: { value: 0.3, min: 0.01, max: 4.2, step: 0.01 },
   })
 
   useEffect(() => {
@@ -85,6 +87,8 @@ export default function BlobShader({ map }) {
     shaderMaterial.uniforms.uCamInverseProjMat.value.copy(
       camera.projectionMatrixInverse
     )
+
+    uniforms.uPointerSize.value = controls.pointerSize
 
     gl.setRenderTarget(buffer)
     gl.setClearColor("#d8d7d7")
