@@ -1,3 +1,3 @@
-# React Three Fiber + Vite
+# FBO shader template
 
-Easy Template for React Three Fiber
+This is a template for a shader that uses a FBO to render a scene.
