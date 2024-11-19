@@ -29,7 +29,7 @@ const float HALF_PI = 0.5*PI;
 const float TWO_PI = 2.0*PI;
 const int LOOP = 16;
 
-#define MAX_STEPS 50
+#define MAX_STEPS 100
 
 float hash(in float v) { return fract(sin(v)*43237.5324); }
 vec3 hash3(in float v) { return vec3(hash(v), hash(v*99.), hash(v*9999.)); }
@@ -61,7 +61,7 @@ float map(in vec3 p) {
     float res = 1e2;
     
     // Modify mouse position calculation to account for aspect ratio
-    vec3 mousePos = vec3(uMouse.x * (uResolution.x/uResolution.y) * 4.0, uMouse.y * 4.0, 0.0);
+    vec3 mousePos = vec3(uMouse.x * (uResolution.x/uResolution.y) * 2.5, uMouse.y * 2.5, 0.0);
     res = sphere(p - mousePos, uPointerSize);
     
     // Existing metaballs
