@@ -18,10 +18,9 @@ export default function BlobShader({ map }) {
   const mousePosition = useRef({ x: 0, y: 0 })
 
   const updateMousePosition = useCallback((e) => {
-    const aspect = window.innerWidth / window.innerHeight
     mousePosition.current = {
-      x: e.clientX / window.innerWidth,
-      y: 1 - e.clientY / window.innerHeight,
+      x: (e.clientX / window.innerWidth) * 2 - 1,
+      y: -(e.clientY / window.innerHeight) * 2 + 1,
     }
   }, [])
 

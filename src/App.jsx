@@ -10,7 +10,16 @@ import "./index.css"
 
 export default function App() {
   return (
-    <Canvas shadows camera={{ position: [0, 0, 5], fov: 40 }}>
+    <Canvas
+      shadows
+      camera={{
+        position: [0, 0, 5],
+        fov: 75,
+        near: 0.1,
+        far: 1000,
+        aspect: window.innerWidth / window.innerHeight,
+      }}
+    >
       <Buffer>
         <Environment files="./hdris/envmap.hdr" />
         <color attach="background" args={["#aaefef"]} />

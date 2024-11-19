@@ -60,8 +60,8 @@ float opSmoothUnion( float d1, float d2, float k ) {
 float map(in vec3 p) {
     float res = 1e2;
     
-    // Add mouse-controlled sphere
-    vec3 mousePos = vec3(uMouse * 2.0 - 1.0, 0.0) * 3.0; // Scale mouse position to world space
+    // Modify mouse position calculation to account for aspect ratio
+    vec3 mousePos = vec3(uMouse.x * (uResolution.x/uResolution.y) * 4.0, uMouse.y * 4.0, 0.0);
     res = sphere(p - mousePos, uPointerSize);
     
     // Existing metaballs
@@ -102,7 +102,7 @@ void main()
     
     // UVs
     vec2 uv = vUv;
-    vec2 p = vec2(uv * 2. - 1.);    
+    vec2 p = (uv * 2.0 - 1.0) * vec2(uResolution.x/uResolution.y, 1.0);    
 
     vec3 ro = uCamPos;
     vec3 rd = (uCamInverseProjMat * vec4(uv * 2.0 - 1.0, 0.0, 1.0)).xyz;
