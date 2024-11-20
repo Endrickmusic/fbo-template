@@ -1,7 +1,7 @@
 import React, { useRef, useMemo, useEffect, useCallback } from "react"
 import { useFrame, useThree } from "@react-three/fiber"
 import { useCubeTexture, useTexture, useFBO } from "@react-three/drei"
-import { useControls, Leva } from "leva"
+import { useControls } from "leva"
 import * as THREE from "three"
 import { Perf } from "r3f-perf"
 import vertexShader from "./shaders/vertexShader.js"
@@ -72,6 +72,15 @@ export default function BlobShader({ map }) {
     uniforms.uTime.value = time
     uniforms.uMouse.value.set(mousePosition.current.x, mousePosition.current.y)
 
+    uniforms.uReflection.value = controls.reflection
+    uniforms.uIOR.value = controls.IOR
+    uniforms.uCount.value = controls.count
+    uniforms.uSize.value = controls.size
+    uniforms.uDispersion.value = controls.dispersion
+    uniforms.uRefract.value = controls.refract
+    uniforms.uChromaticAberration.value = controls.chromaticAberration
+    uniforms.uPointerSize.value = controls.pointerSize
+
     camera
       .getWorldDirection(cameraForwardPos)
       .multiplyScalar(camera.near)
@@ -86,8 +95,6 @@ export default function BlobShader({ map }) {
     shaderMaterial.uniforms.uCamInverseProjMat.value.copy(
       camera.projectionMatrixInverse
     )
-
-    uniforms.uPointerSize.value = controls.pointerSize
 
     gl.setRenderTarget(buffer)
     gl.setClearColor("#d8d7d7")
@@ -117,7 +124,6 @@ export default function BlobShader({ map }) {
   return (
     <>
       <Perf position="top-left" minimal={false} className="stats" />
-      <Leva hidden />
       <mesh ref={meshRef} scale={[nearPlaneWidth, nearPlaneHeight, 1]}>
         <planeGeometry args={[1, 1]} />
         <primitive object={shaderMaterial} />

@@ -14,7 +14,7 @@ uniform float uIOR;
 uniform int uCount;
 uniform float uSize;
 uniform float uDispersion;
-uniform float uRefractPower;
+uniform float uRefract;
 uniform float uChromaticAberration;
 
 uniform vec3 uCamPos;
@@ -29,7 +29,7 @@ const float HALF_PI = 0.5*PI;
 const float TWO_PI = 2.0*PI;
 const int LOOP = 16;
 
-#define MAX_STEPS 50
+#define MAX_STEPS 150
 
 float hash(in float v) { return fract(sin(v)*43237.5324); }
 vec3 hash3(in float v) { return vec3(hash(v), hash(v*99.), hash(v*9999.)); }
@@ -37,14 +37,12 @@ vec3 hash3(in float v) { return vec3(hash(v), hash(v*99.), hash(v*9999.)); }
 float sphere(in vec3 p, in float r) { 
     float d = length(p)-r; 
     
-    // Simpler UV calculation - just use xz plane for noise
-    vec2 uv = p.xz * 0.5;
-    
-    // Faster noise sampling - reduce texture resolution and animation speed
+    // texture displacement
+    vec2 uv = vec2(atan(p.x, p.z) / TWO_PI, p.y / 5.);
+    // vec2 uv = vec2(0.5 + atan(p.z, p.x) / (2.0 * PI), 0.5 - asin(p.y) / PI);
     float noise = texture2D(uNoiseTexture, uv).r;
-    
-    // Simplified displacement with height falloff
-    float displacement = noise * 0.15 * (1.0 - abs(p.y));
+    float displacement = sin(p.x * 3.0 + uTime * 1.2 + noise) * 0.1;
+    displacement *= smoothstep(0.8, -0.8, p.y); // reduce displacement at the poles
     // d += displacement;
 
     return d;
@@ -144,19 +142,21 @@ void main()
     float iorRatioGreen = iorRatio;
     float iorRatioBlue = iorRatio - uDispersion;
 
-    // Calculate refraction vectors once outside the loop
+for ( int i = 0; i < LOOP; i ++ ) {
+  float slide = float(i) / float(LOOP) * 0.1;
+
     vec3 refractVecR = refract(rd, nor, iorRatioRed);
     vec3 refractVecG = refract(rd, nor, iorRatioGreen);
     vec3 refractVecB = refract(rd, nor, iorRatioBlue);
 
-    // Single texture lookup per channel
-    vec2 uvR = uv + refractVecR.xy * uRefractPower;
-    vec2 uvG = uv + refractVecG.xy * uRefractPower;
-    vec2 uvB = uv + refractVecB.xy * uRefractPower;
+    color.r += texture2D(uTexture, uv + refractVecR.xy * (uRefract + slide * 1.0)).r;
+    color.g += texture2D(uTexture, uv + refractVecG.xy * (uRefract + slide * 2.0)).g;
+    color.b += texture2D(uTexture, uv + refractVecB.xy * (uRefract + slide * 3.0)).b;
 
-    color.r = texture2D(uTexture, uvR).r;
-    color.g = texture2D(uTexture, uvG).g;
-    color.b = texture2D(uTexture, uvB).b;
+}
+
+    // Add this line to normalize the colors
+    color /= float(LOOP);
 
     // fresnel
     float fresnel = pow(1. + dot(rd, nor), uReflection);
