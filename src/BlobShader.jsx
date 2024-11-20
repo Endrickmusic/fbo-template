@@ -24,7 +24,12 @@ export default function BlobShader({ map }) {
     }
   }, [])
 
-  const noiseTexture = useTexture("./textures/noise.png")
+  const noiseTexture = useTexture("./textures/noise.png", (texture) => {
+    texture.wrapS = THREE.RepeatWrapping
+    texture.wrapT = THREE.RepeatWrapping
+    texture.minFilter = THREE.LinearFilter
+    texture.magFilter = THREE.LinearFilter
+  })
 
   const cubeTexture = useCubeTexture(
     ["px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png"],
@@ -36,11 +41,25 @@ export default function BlobShader({ map }) {
     speed: { value: 0.5, min: 0.01, max: 3.0, step: 0.01 },
     IOR: { value: 0.84, min: 0.01, max: 1.0, step: 0.01 },
     count: { value: 3, min: 1, max: 20, step: 1 },
-    size: { value: 0.005, min: 0.001, max: 0.5, step: 0.001 },
+    size: { value: 0.15, min: 0.001, max: 0.5, step: 0.001 },
     dispersion: { value: 0.03, min: 0.0, max: 0.1, step: 0.001 },
     refract: { value: 0.15, min: 0.0, max: 2.0, step: 0.1 },
     chromaticAberration: { value: 0.5, min: 0.0, max: 5.0, step: 0.1 },
     pointerSize: { value: 0.3, min: 0.01, max: 4.2, step: 0.01 },
+    noiseScale: {
+      value: 0.4,
+      min: 0.002,
+      max: 1.0,
+      step: 0.001,
+      label: "Noise Scale",
+    },
+    noiseAmount: {
+      value: 0.2,
+      min: 0.0,
+      max: 2.0,
+      step: 0.01,
+      label: "Noise Amount",
+    },
   })
 
   useEffect(() => {
@@ -80,6 +99,8 @@ export default function BlobShader({ map }) {
     uniforms.uRefract.value = controls.refract
     uniforms.uChromaticAberration.value = controls.chromaticAberration
     uniforms.uPointerSize.value = controls.pointerSize
+    uniforms.uNoiseScale.value = controls.noiseScale
+    uniforms.uNoiseAmount.value = controls.noiseAmount
 
     camera
       .getWorldDirection(cameraForwardPos)

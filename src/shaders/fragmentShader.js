@@ -16,6 +16,8 @@ uniform float uSize;
 uniform float uDispersion;
 uniform float uRefract;
 uniform float uChromaticAberration;
+uniform float uNoiseScale;
+uniform float uNoiseAmount;
 
 uniform vec3 uCamPos;
 uniform mat4 uCamToWorldMat;
@@ -29,22 +31,34 @@ const float HALF_PI = 0.5*PI;
 const float TWO_PI = 2.0*PI;
 const int LOOP = 16;
 
-#define MAX_STEPS 150
+#define MAX_STEPS 100
+#define MAX_DIST 5.0
+#define MIN_DIST 0.005
 
 float hash(in float v) { return fract(sin(v)*43237.5324); }
 vec3 hash3(in float v) { return vec3(hash(v), hash(v*99.), hash(v*9999.)); }
 
 float sphere(in vec3 p, in float r) { 
-    float d = length(p)-r; 
+    float d = length(p) - r; 
     
-    // texture displacement
-    vec2 uv = vec2(atan(p.x, p.z) / TWO_PI, p.y / 5.);
-    // vec2 uv = vec2(0.5 + atan(p.z, p.x) / (2.0 * PI), 0.5 - asin(p.y) / PI);
-    float noise = texture2D(uNoiseTexture, uv).r;
-    float displacement = sin(p.x * 3.0 + uTime * 1.2 + noise) * 0.1;
-    displacement *= smoothstep(0.8, -0.8, p.y); // reduce displacement at the poles
-    // d += displacement;
+    vec2 uv = vec2(
+        0.5 + atan(p.z, p.x) / (2.0 * PI),
+        0.5 + asin(p.y / length(p)) / PI
+    ) * uNoiseScale;
+    
+    // vec2 animatedUV = uv * uNoiseScale + vec2(
+    //     sin(uTime * 0.5) * 0.1,
+    //     cos(uTime * 0.3) * 0.1
+    // );
 
+    vec2 animatedUV = vec2(uv.y + uTime * 0.07, uv.x + uTime * 0.05);
+    
+    float noise = texture2D(uNoiseTexture, animatedUV).r;
+    // float noise = texture2D(uNoiseTexture, uv).r;
+    
+    noise *= smoothstep(1.4, 1.0, abs(p.x));
+    d -= noise * uNoiseAmount;
+    
     return d;
 }
 
@@ -53,20 +67,19 @@ float opSmoothUnion( float d1, float d2, float k ) {
     return mix( d2, d1, h ) - k*h*(1.0-h);
 }
 
-#define BALL_NUM 5
+#define BALL_NUM 3
 
 float map(in vec3 p) {
     float res = 1e2;
     
-    // Modify mouse position calculation to account for aspect ratio
     vec3 mousePos = vec3(uMouse.x * (uResolution.x/uResolution.y) * 2.5, uMouse.y * 2.5, 0.0);
     res = sphere(p - mousePos, uPointerSize);
     
-    // Existing metaballs
     for(int i=0; i<BALL_NUM; i++) {
         float fi = float(i) + 1.;
-        float r = uSize + 0.4 * hash(fi);
-        vec3 offset = 0.78 * sin(hash3(fi) * uTime);
+        float maxSize = 0.4; // adjust this maximum value as needed
+        float r = min(maxSize, uSize + 0.5 * hash(fi));
+        vec3 offset = 0.88 * sin(hash3(fi) * uTime);
         res = opSmoothUnion(res, sphere(p-offset, r), 1.0);
     }
     return res;
@@ -98,7 +111,6 @@ void main()
 {
     float iorRatio = uIOR;
     
-    // UVs
     vec2 uv = vUv;
     vec2 p = (uv * 2.0 - 1.0) * vec2(uResolution.x/uResolution.y, 1.0);    
 
@@ -107,23 +119,18 @@ void main()
     rd = (uCamToWorldMat * vec4(rd, 0.0)).xyz;
     rd = normalize(rd);
 
-    vec2 tmm = vec2(0., 10.);
     float t = 0.;
     for(int i = 0; i < MAX_STEPS; i++) {
-
         float tmp = map(ro + rd * t);
         
-        if(tmp < 0.002 || tmm.y < t) break;
+        if(tmp < MIN_DIST || t > MAX_DIST) break;
         t += tmp * 0.9;
     }
   
-    if(tmm.y < t) {
-        
+    if(t > MAX_DIST) {
         // background
         gl_FragColor = vec4(1.0, 1.0, 1.0, 0.0);
-
     } else {
-        
         // object position
         vec3 pos = ro + rd * t;
         // normal
