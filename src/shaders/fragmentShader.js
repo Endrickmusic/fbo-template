@@ -45,11 +45,6 @@ float sphere(in vec3 p, in float r) {
         0.5 + atan(p.z, p.x) / (2.0 * PI),
         0.5 + asin(p.y / length(p)) / PI
     ) * uNoiseScale;
-    
-    // vec2 animatedUV = uv * uNoiseScale + vec2(
-    //     sin(uTime * 0.5) * 0.1,
-    //     cos(uTime * 0.3) * 0.1
-    // );
 
     vec2 animatedUV = vec2(uv.y + uTime * 0.07, uv.x + uTime * 0.05);
     
@@ -67,17 +62,17 @@ float opSmoothUnion( float d1, float d2, float k ) {
     return mix( d2, d1, h ) - k*h*(1.0-h);
 }
 
-#define BALL_NUM 3
+#define BALL_NUM 10
 
 float map(in vec3 p) {
-    float res = 1e2;
+    float res = 1e5;
     
     vec3 mousePos = vec3(uMouse.x * (uResolution.x/uResolution.y) * 2.5, uMouse.y * 2.5, 0.0);
     res = sphere(p - mousePos, uPointerSize);
     
     for(int i=0; i<BALL_NUM; i++) {
         float fi = float(i) + 1.;
-        float maxSize = 0.4; // adjust this maximum value as needed
+        float maxSize = 0.25; // adjust this maximum value as needed
         float r = min(maxSize, uSize + 0.5 * hash(fi));
         vec3 offset = 0.88 * sin(hash3(fi) * uTime);
         res = opSmoothUnion(res, sphere(p-offset, r), 1.0);
