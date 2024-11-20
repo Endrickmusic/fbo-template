@@ -29,26 +29,26 @@ const float HALF_PI = 0.5*PI;
 const float TWO_PI = 2.0*PI;
 const int LOOP = 16;
 
-#define MAX_STEPS 100
+#define MAX_STEPS 50
 
 float hash(in float v) { return fract(sin(v)*43237.5324); }
 vec3 hash3(in float v) { return vec3(hash(v), hash(v*99.), hash(v*9999.)); }
 
 float sphere(in vec3 p, in float r) { 
     float d = length(p)-r; 
-    // sin displacement
-    // d += sin(p.x * 8. + uTime) * 0.1;
-
-    // texture displacement
-    // vec2 uv = vec2(atan(p.x, p.z) / TWO_PI, p.y / 5.);
-    // vec2 uv = vec2(0.5 + atan(p.z, p.x) / (2.0 * PI), 0.5 - asin(p.y) / PI);
-    // float noise = texture2D(uNoiseTexture, uv).r;
-    // float displacement = sin(p.x * 3.0 + uTime * 5. + noise) * 0.3;
-    // displacement *= smoothstep(0.8, -0.8, p.y); // reduce displacement at the poles
+    
+    // Simpler UV calculation - just use xz plane for noise
+    vec2 uv = p.xz * 0.5;
+    
+    // Faster noise sampling - reduce texture resolution and animation speed
+    float noise = texture2D(uNoiseTexture, uv).r;
+    
+    // Simplified displacement with height falloff
+    float displacement = noise * 0.15 * (1.0 - abs(p.y));
     // d += displacement;
 
     return d;
-    }
+}
 
 float opSmoothUnion( float d1, float d2, float k ) {
     float h = clamp( 0.5 + 0.5*(d2-d1)/k, 0.0, 1.0 );
