@@ -31,7 +31,7 @@ const float HALF_PI = 0.5*PI;
 const float TWO_PI = 2.0*PI;
 const int LOOP = 16;
 
-#define MAX_STEPS 100
+#define MAX_STEPS 50
 #define MAX_DIST 5.0
 #define MIN_DIST 0.005
 
