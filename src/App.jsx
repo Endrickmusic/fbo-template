@@ -6,6 +6,7 @@ import { Leva } from "leva"
 
 import Experience from "./Experience"
 import Buffer from "./Buffer"
+import BlobShader from "./Shader"
 
 import "./index.css"
 
@@ -23,7 +24,6 @@ export default function App() {
           aspect: window.innerWidth / window.innerHeight,
         }}
       >
-        {/* <Buffer> */}
         <Environment files="./hdris/envmap.hdr" />
         <color attach="background" args={["#aaefef"]} />
         <ScrollControls pages={3} damping={0.1}>
@@ -46,8 +46,8 @@ export default function App() {
           <Scroll>
             <Experience position={[0, -10, 0]} />
           </Scroll>
+          <BlobShader />
         </ScrollControls>
-        {/* </Buffer> */}
       </Canvas>
     </>
   )

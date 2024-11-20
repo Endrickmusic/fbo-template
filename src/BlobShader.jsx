@@ -145,7 +145,7 @@ export default function BlobShader({ map }) {
   return (
     <>
       <Perf position="top-left" minimal={false} className="stats" />
-      <mesh ref={meshRef} scale={[nearPlaneWidth, nearPlaneHeight, 1]}>
+      <mesh ref={meshRef} scale={[viewport.width, viewport.height, 1]}>
         <planeGeometry args={[1, 1]} />
         <primitive object={shaderMaterial} />
       </mesh>

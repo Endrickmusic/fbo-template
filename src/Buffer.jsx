@@ -21,10 +21,10 @@ export default function Buffer({ children }) {
   return (
     <>
       {createPortal(children, bufferScene)}
-      <mesh ref={planeRef}>
+      {/* <mesh ref={planeRef}>
         <planeGeometry args={[viewport.width, viewport.height]} />
         <meshBasicMaterial map={buffer.texture} />
-      </mesh>
+      </mesh> */}
       <BlobShader map={buffer.texture} />
     </>
   )
