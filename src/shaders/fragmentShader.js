@@ -52,7 +52,7 @@ float sphere(in vec3 p, in float r) {
     // float noise = texture2D(uNoiseTexture, uv).r;
     
     noise *= smoothstep(1.4, 1.0, abs(p.x));
-    d -= noise * uNoiseAmount;
+    // d -= noise * uNoiseAmount;
     
     return d;
 }
@@ -76,6 +76,7 @@ float map(in vec3 p) {
         float r = min(maxSize, uSize + 0.5 * hash(fi));
         vec3 offset = 0.88 * sin(hash3(fi) * uTime);
         res = opSmoothUnion(res, sphere(p-offset, r), 1.0);
+        
     }
     return res;
 }
@@ -140,25 +141,31 @@ void main()
 
     vec3 color = vec3(0.);
 
-    float iorRatioRed = iorRatio + uDispersion;
-    float iorRatioGreen = iorRatio;
-    float iorRatioBlue = iorRatio - uDispersion;
+//     float iorRatioRed = iorRatio + uDispersion;
+//     float iorRatioGreen = iorRatio;
+//     float iorRatioBlue = iorRatio - uDispersion;
 
-for ( int i = 0; i < LOOP; i ++ ) {
-  float slide = float(i) / float(LOOP) * 0.1;
+// for ( int i = 0; i < LOOP; i ++ ) {
+//   float slide = float(i) / float(LOOP) * 0.1;
 
-    vec3 refractVecR = refract(rd, nor, iorRatioRed);
-    vec3 refractVecG = refract(rd, nor, iorRatioGreen);
-    vec3 refractVecB = refract(rd, nor, iorRatioBlue);
+//     vec3 refractVecR = refract(rd, nor, iorRatioRed);
+//     vec3 refractVecG = refract(rd, nor, iorRatioGreen);
+//     vec3 refractVecB = refract(rd, nor, iorRatioBlue);
 
-    color.r += texture2D(uTexture, uv + refractVecR.xy * (uRefract + slide * 1.0)).r;
-    color.g += texture2D(uTexture, uv + refractVecG.xy * (uRefract + slide * 2.0)).g;
-    color.b += texture2D(uTexture, uv + refractVecB.xy * (uRefract + slide * 3.0)).b;
+//     color.r += texture2D(uTexture, uv + refractVecR.xy * (uRefract + slide * 1.0)).r;
+//     color.g += texture2D(uTexture, uv + refractVecG.xy * (uRefract + slide * 2.0)).g;
+//     color.b += texture2D(uTexture, uv + refractVecB.xy * (uRefract + slide * 3.0)).b;
 
-}
+// }
+
+        vec2 sphereUV = vec2(
+            0.5 + atan(pos.z, pos.x) / (2.0 * PI),
+            0.5 + asin(pos.y / length(pos) / PI)
+        );
+        color = texture2D(uNoiseTexture, sphereUV).rgb;
 
     // Add this line to normalize the colors
-    color /= float(LOOP);
+    // color /= float(LOOP);
 
     // fresnel
     float fresnel = pow(1. + dot(rd, nor), uReflection);

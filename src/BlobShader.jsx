@@ -1,6 +1,6 @@
-import React, { useRef, useMemo, useEffect, useCallback } from "react"
+import React, { useRef, useMemo, useEffect } from "react"
 import { useFrame, useThree } from "@react-three/fiber"
-import { useCubeTexture, useTexture, useFBO } from "@react-three/drei"
+import { useCubeTexture, useTexture } from "@react-three/drei"
 import { useControls } from "leva"
 import * as THREE from "three"
 import { Perf } from "r3f-perf"
@@ -8,27 +8,67 @@ import vertexShader from "./shaders/vertexShader.js"
 import fragmentShader from "./shaders/fragmentShader.js"
 import useShaderMaterial from "./hooks/useShaderMaterial.jsx"
 
+// Separate controls configuration for better readability
+const SHADER_CONTROLS = {
+  reflection: { value: 1.5, min: 0.01, max: 6.0, step: 0.1 },
+  speed: { value: 0.5, min: 0.01, max: 3.0, step: 0.01 },
+  IOR: { value: 0.84, min: 0.01, max: 1.0, step: 0.01 },
+  count: { value: 3, min: 1, max: 20, step: 1 },
+  size: { value: 0.15, min: 0.001, max: 0.5, step: 0.001 },
+  dispersion: { value: 0.03, min: 0.0, max: 0.1, step: 0.001 },
+  refract: { value: 0.15, min: 0.0, max: 2.0, step: 0.1 },
+  chromaticAberration: {
+    value: 0.5,
+    min: 0.0,
+    max: 5.0,
+    step: 0.1,
+    label: "Chromatic Aberration",
+  },
+  pointerSize: { value: 0.3, min: 0.01, max: 4.2, step: 0.01 },
+  noiseScale: {
+    value: 0.4,
+    min: 0.002,
+    max: 1.0,
+    step: 0.001,
+    label: "Noise Scale",
+  },
+  noiseAmount: {
+    value: 0.2,
+    min: 0.0,
+    max: 2.0,
+    step: 0.01,
+    label: "Noise Amount",
+  },
+}
+
 export default function BlobShader({ map }) {
   const meshRef = useRef()
-  const buffer = useFBO()
-  const { viewport, scene, camera, gl } = useThree()
+  const mousePosition = useRef({ x: 0, y: 0 })
+  const { viewport, camera, gl } = useThree()
 
   const shaderMaterial = useShaderMaterial({ vertexShader, fragmentShader })
+  const controls = useControls(SHADER_CONTROLS)
 
-  const mousePosition = useRef({ x: 0, y: 0 })
-
-  const updateMousePosition = useCallback((e) => {
-    mousePosition.current = {
-      x: (e.clientX / window.innerWidth) * 2 - 1,
-      y: -(e.clientY / window.innerHeight) * 2 + 1,
+  // Memoized calculations
+  const { nearPlaneWidth, nearPlaneHeight } = useMemo(() => {
+    const width =
+      camera.near *
+      Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) *
+      camera.aspect *
+      2
+    return {
+      nearPlaneWidth: width,
+      nearPlaneHeight: width / camera.aspect,
     }
-  }, [])
+  }, [camera])
 
-  const noiseTexture = useTexture("./textures/noise.png", (texture) => {
-    texture.wrapS = THREE.RepeatWrapping
-    texture.wrapT = THREE.RepeatWrapping
-    texture.minFilter = THREE.LinearFilter
-    texture.magFilter = THREE.LinearFilter
+  // Memoized vectors and matrices
+  const cameraForwardPos = useMemo(() => new THREE.Vector3(), [])
+
+  // Load textures
+  const noiseTexture = useTexture("./textures/uv_map_01.jpg", (texture) => {
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping
+    texture.minFilter = texture.magFilter = THREE.LinearFilter
   })
 
   const cubeTexture = useCubeTexture(
@@ -36,72 +76,56 @@ export default function BlobShader({ map }) {
     { path: "./cubemap/potsdamer_platz/" }
   )
 
-  const controls = useControls({
-    reflection: { value: 1.5, min: 0.01, max: 6.0, step: 0.1 },
-    speed: { value: 0.5, min: 0.01, max: 3.0, step: 0.01 },
-    IOR: { value: 0.84, min: 0.01, max: 1.0, step: 0.01 },
-    count: { value: 3, min: 1, max: 20, step: 1 },
-    size: { value: 0.15, min: 0.001, max: 0.5, step: 0.001 },
-    dispersion: { value: 0.03, min: 0.0, max: 0.1, step: 0.001 },
-    refract: { value: 0.15, min: 0.0, max: 2.0, step: 0.1 },
-    chromaticAberration: { value: 0.5, min: 0.0, max: 5.0, step: 0.1 },
-    pointerSize: { value: 0.3, min: 0.01, max: 4.2, step: 0.01 },
-    noiseScale: {
-      value: 0.4,
-      min: 0.002,
-      max: 1.0,
-      step: 0.001,
-      label: "Noise Scale",
-    },
-    noiseAmount: {
-      value: 0.2,
-      min: 0.0,
-      max: 2.0,
-      step: 0.01,
-      label: "Noise Amount",
-    },
-  })
-
+  // Mouse movement handler
   useEffect(() => {
-    window.addEventListener("mousemove", updateMousePosition, false)
-    return () => {
-      window.removeEventListener("mousemove", updateMousePosition, false)
+    const handleMouseMove = (e) => {
+      mousePosition.current = {
+        x: (e.clientX / window.innerWidth) * 2 - 1,
+        y: -(e.clientY / window.innerHeight) * 2 + 1,
+      }
     }
-  }, [updateMousePosition])
 
+    window.addEventListener("mousemove", handleMouseMove)
+    return () => window.removeEventListener("mousemove", handleMouseMove)
+  }, [])
+
+  // Resize handler
   useEffect(() => {
     const handleResize = () => {
       shaderMaterial.uniforms.uResolution.value
         .set(viewport.width, viewport.height)
         .multiplyScalar(Math.min(window.devicePixelRatio, 2))
     }
+
     handleResize()
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
-  }, [viewport])
+  }, [viewport, shaderMaterial])
 
-  const cameraForwardPos = useMemo(() => new THREE.Vector3(), [])
-  const mouseVector = useMemo(() => new THREE.Vector2(), [])
+  // Update textures
+  useEffect(() => {
+    const { uniforms } = shaderMaterial
+    uniforms.uTexture.value = map
+    uniforms.uNoiseTexture.value = noiseTexture
+    uniforms.iChannel0.value = cubeTexture
+  }, [map, noiseTexture, cubeTexture, shaderMaterial])
 
+  // Animation frame updates
   useFrame((state) => {
-    const { current: mesh } = meshRef
+    const mesh = meshRef.current
     const { uniforms } = shaderMaterial
 
-    const time = state.clock.getElapsedTime() * controls.speed
-    uniforms.uTime.value = time
+    // Update time-based and mouse uniforms
+    uniforms.uTime.value = state.clock.getElapsedTime() * controls.speed
     uniforms.uMouse.value.set(mousePosition.current.x, mousePosition.current.y)
 
-    uniforms.uReflection.value = controls.reflection
-    uniforms.uIOR.value = controls.IOR
-    uniforms.uCount.value = controls.count
-    uniforms.uSize.value = controls.size
-    uniforms.uDispersion.value = controls.dispersion
-    uniforms.uRefract.value = controls.refract
-    uniforms.uChromaticAberration.value = controls.chromaticAberration
-    uniforms.uPointerSize.value = controls.pointerSize
-    uniforms.uNoiseScale.value = controls.noiseScale
-    uniforms.uNoiseAmount.value = controls.noiseAmount
+    // Update control-based uniforms
+    Object.entries(controls).forEach(([key, value]) => {
+      const uniformKey = `u${key.charAt(0).toUpperCase()}${key.slice(1)}`
+      if (uniforms[uniformKey]) uniforms[uniformKey].value = value
+    })
 
+    // Update camera-related values
     camera
       .getWorldDirection(cameraForwardPos)
       .multiplyScalar(camera.near)
@@ -111,36 +135,11 @@ export default function BlobShader({ map }) {
     mesh.rotation.copy(camera.rotation)
     mesh.scale.set(nearPlaneWidth, nearPlaneHeight, 1)
 
-    shaderMaterial.uniforms.uCamPos.value.copy(camera.position)
-    shaderMaterial.uniforms.uCamToWorldMat.value.copy(camera.matrixWorld)
-    shaderMaterial.uniforms.uCamInverseProjMat.value.copy(
-      camera.projectionMatrixInverse
-    )
-
-    gl.setRenderTarget(buffer)
-    gl.setClearColor("#d8d7d7")
-    gl.render(scene, camera)
-    gl.setRenderTarget(null)
+    // Update camera uniforms
+    uniforms.uCamPos.value.copy(camera.position)
+    uniforms.uCamToWorldMat.value.copy(camera.matrixWorld)
+    uniforms.uCamInverseProjMat.value.copy(camera.projectionMatrixInverse)
   })
-
-  useEffect(() => {
-    shaderMaterial.uniforms.uTexture.value = map
-    shaderMaterial.uniforms.uNoiseTexture.value = noiseTexture
-    shaderMaterial.uniforms.iChannel0.value = cubeTexture
-  }, [map, noiseTexture, cubeTexture])
-
-  const nearPlaneWidth = useMemo(
-    () =>
-      camera.near *
-      Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) *
-      camera.aspect *
-      2,
-    [camera, viewport]
-  )
-  const nearPlaneHeight = useMemo(
-    () => nearPlaneWidth / camera.aspect,
-    [nearPlaneWidth, camera, viewport]
-  )
 
   return (
     <>
